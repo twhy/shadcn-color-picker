@@ -1,6 +1,8 @@
 # Shadcn Color Picker
 
 ## Preview
+https://shadcn-color-picker-sigma.vercel.app/
+
 ```bash
 npm run dev
 # or
