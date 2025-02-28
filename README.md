@@ -34,6 +34,9 @@ export default function Home() {
 }
 ```
 
+## Screenshot
+![color-picker](https://github.com/user-attachments/assets/25cf79ae-94e1-4fe3-ad67-4750fdc5a039)
+
 ## License
 
 MIT
