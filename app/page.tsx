@@ -12,7 +12,7 @@ export default function Home() {
   const hsla = useMemo(() => hexToHSLA(color), [color]);
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-24">
+    <main className="flex min-h-screen flex-col items-center justify-center p-24 bg-gray-100">
       <ColorPicker color={color} onChange={setColor} />
       <div className="mt-4 flex items-center justify-center gap-3">
         <span
