@@ -1,9 +1,10 @@
 "use client";
 
 import * as SliderPrimitive from "@radix-ui/react-slider";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { cn } from "@/lib/utils";
-import { useMemo, useRef } from "react";
+import { useRef } from "react";
 
 export type HSLA = {
   h: number;
@@ -21,131 +22,164 @@ export type RGBA = {
 
 export type HexColor = `#${string}`;
 
-function ColorPicker({
-  color = "#ff0000",
-  className,
-  onChange = () => {},
-}: {
-  color?: HexColor;
-  className?: string;
-  onChange?: (color: HexColor) => void;
-}) {
-  const rgba = useMemo(() => hexToRGBA(color!), [color]);
-  return (
-    <div
-      className={cn(
-        "rounded-lg size-64 relative shadow-sm space-y-4",
-        className,
-      )}
-    >
-      <SaturationLightness color={color} onChange={onChange} />
-      <ColorSlider color={color} onChange={onChange} />
-      <AlphaSlider color={color} onChange={onChange} />
-      <div className="flex items-center justify-center font-mono font-medium">
-        {color} {Math.round(rgba.a * 100)}%
-      </div>
-    </div>
-  );
+interface ColorPickerProps {
+  color: HexColor;
+  onChange: (color: HexColor) => void;
 }
 
-function SaturationLightness({
-  className,
-  color = "#ff0000",
-  onChange = () => {},
-}: {
-  color?: HexColor;
-  className?: string;
-  onChange?: (color: HexColor) => void;
-}) {
-  const circle = useRef<HTMLDivElement>(null);
-  const square = useRef<HTMLDivElement>(null);
-  const rgba = hexToRGBA(color);
-  const bgc = useMemo(() => rgbaToHex(hueToRGBA(rgbaToHue(rgba))), [rgba]);
+export function ColorPicker({ color, onChange }: ColorPickerProps) {
+  const hsla = useMemo(() => hexToHSLA(color), [color]);
+  const [hue, setHue] = useState(hsla.h);
+  const [saturation, setSaturation] = useState(hsla.s);
+  const [lightness, setLightness] = useState(hsla.l);
+  const [alpha, setAlpha] = useState(hsla.a);
+  const squareRef = useRef<HTMLDivElement>(null);
 
-  const onMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    document.addEventListener("mouseup", onMouseUp);
-    document.addEventListener("mousemove", onMouseMove);
-  };
+  const handleMove = useCallback(
+    (clientX: number, clientY: number, element: HTMLElement) => {
+      const rect = element.getBoundingClientRect();
+      const x = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+      const y = Math.max(0, Math.min(1, (clientY - rect.top) / rect.height));
 
-  const onMouseMove = (e: MouseEvent) => {
-    if (!circle.current || !square.current) return;
-    e.preventDefault();
-    e.stopPropagation();
+      setSaturation(x * 100);
+      setLightness(100 - y * 100);
+    },
+    [],
+  );
 
-    circle.current.classList.add("-translate-x-1/2", "-translate-y-1/2");
+  const handleSquareMouseMove = useCallback(
+    (event: React.MouseEvent<HTMLDivElement>) => {
+      handleMove(event.clientX, event.clientY, event.currentTarget);
+    },
+    [handleMove],
+  );
 
-    const rect = square.current.getBoundingClientRect();
-    const deltaX = e.clientX - rect.left;
-    const deltaY = e.clientY - rect.top;
-    const saturation = Math.min(1, Math.max(0, deltaX / rect.width));
-    const lightness = Math.min(1, Math.max(0, deltaY / rect.height));
-    circle.current.style.left = `${saturation * 100}%`;
-    circle.current.style.top = `${lightness * 100}%`;
+  const handleSquareTouchMove = useCallback(
+    (event: React.TouchEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      const touch = event.touches[0];
+      handleMove(touch.clientX, touch.clientY, event.currentTarget);
+    },
+    [handleMove],
+  );
 
-    onChange?.(
-      rgbaToHex(hslaToRGBA(rgbaToHue(rgba), saturation, lightness, rgba.a)),
-    );
-  };
+  const handleSquareMouseDown = useCallback(
+    (event: React.MouseEvent<HTMLDivElement>) => {
+      const square = event.currentTarget;
 
-  const onMouseUp = () => {
-    document.removeEventListener("mouseup", onMouseUp);
-    document.removeEventListener("mousemove", onMouseMove);
-  };
+      const handleMouseMove = (e: MouseEvent) => {
+        handleMove(e.clientX, e.clientY, square);
+      };
+
+      const handleMouseUp = () => {
+        document.removeEventListener("mousemove", handleMouseMove);
+        document.removeEventListener("mouseup", handleMouseUp);
+      };
+
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+    },
+    [handleMove],
+  );
+
+  const handleSquareTouchStart = useCallback(
+    (event: React.TouchEvent<HTMLDivElement>) => {
+      const square = event.currentTarget;
+
+      const handleTouchMove = (e: TouchEvent) => {
+        e.preventDefault();
+        const touch = e.touches[0];
+        handleMove(touch.clientX, touch.clientY, square);
+      };
+
+      const handleTouchEnd = () => {
+        document.removeEventListener("touchmove", handleTouchMove);
+        document.removeEventListener("touchend", handleTouchEnd);
+      };
+
+      document.addEventListener("touchmove", handleTouchMove, {
+        passive: false,
+      });
+      document.addEventListener("touchend", handleTouchEnd);
+    },
+    [handleMove],
+  );
+
+  useEffect(() => {
+    onChange(hslaToHex({ h: hue, s: saturation, l: lightness, a: alpha }));
+  }, [hue, saturation, lightness, alpha, onChange]);
 
   return (
-    <div
-      ref={square}
-      className={cn("rounded-lg size-64 relative shadow-sm", className)}
-      style={{
-        backgroundColor: bgc,
-        backgroundImage:
-          "linear-gradient(to top, rgb(0, 0, 0), transparent), linear-gradient(to right, rgb(255, 255, 255), transparent)",
-      }}
-    >
+    <div className="flex flex-col gap-4 w-64">
       <div
-        ref={circle}
-        className="w-4 h-4 border border-white bg-white shadow-sm rounded-full absolute bottom-1 right-1"
-        onMouseDown={onMouseDown}
-      />
+        ref={squareRef}
+        className="relative w-full h-64 rounded-lg cursor-crosshair touch-none"
+        style={{
+          backgroundColor: `hsl(${hue}, 100%, 50%)`,
+        }}
+        onMouseDown={handleSquareMouseDown}
+        onMouseMove={(e) => e.buttons === 1 && handleSquareMouseMove(e)}
+        onTouchStart={handleSquareTouchStart}
+        onTouchMove={handleSquareTouchMove}
+      >
+        {/* White gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-r from-white to-transparent rounded-lg" />
+        {/* Black gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black rounded-lg" />
+
+        {/* Selection circle */}
+        <div
+          className="absolute w-4 h-4 border border-gray-200 bg-white rounded-full shadow-sm transform -translate-x-1/2 -translate-y-1/2"
+          style={{
+            left: `${saturation}%`,
+            top: `${100 - lightness}%`,
+          }}
+        />
+      </div>
+
+      <div className="flex flex-col gap-3">
+        <ColorSlider
+          value={[hue]}
+          max={360}
+          step={1}
+          className="h-4 rounded-md"
+          onValueChange={(values) => setHue(values[0])}
+        />
+
+        <AlphaSlider
+          value={[alpha]}
+          min={0}
+          max={1}
+          step={0.01}
+          hsla={{ h: hue, s: saturation, l: lightness, a: alpha }}
+          className="h-4 rounded-md"
+          onValueChange={(values) => setAlpha(values[0])}
+        />
+      </div>
     </div>
   );
 }
 
 function ColorSlider({
   className,
-  color,
-  defaultColor = "#ff0000",
-  disabled = false,
-  onChange = () => {},
-}: {
-  color?: HexColor;
-  defaultColor?: HexColor;
-  disabled?: boolean;
-  className?: string;
-  onChange?: (color: HexColor) => void;
-}) {
-  const rgba = hexToRGBA(color!);
-  const hue = useMemo(() => rgbaToHue(rgba), [rgba]);
-  const def = useMemo(() => rgbaToHue(hexToRGBA(defaultColor!)), [
-    defaultColor,
-  ]);
+  defaultValue,
+  value,
+  min = 0,
+  max = 360,
+  ...props
+}: React.ComponentProps<typeof SliderPrimitive.Root>) {
   return (
     <SliderPrimitive.Root
       data-slot="slider"
-      defaultValue={[def]}
-      value={typeof color === "string" ? [hue] : undefined}
-      min={0}
-      max={359}
-      step={1}
-      onValueChange={(values) =>
-        onChange?.(rgbaToHex(hueToRGBA(values[0], rgba.a)))}
+      defaultValue={defaultValue}
+      value={value}
+      min={min}
+      max={max}
       className={cn(
-        "relative flex w-full touch-none items-center select-none data-[disabled]:opacity-50",
+        "relative flex w-full touch-none items-center select-none data-[disabled]:opacity-50 data-[orientation=vertical]:h-full data-[orientation=vertical]:min-h-44 data-[orientation=vertical]:w-auto data-[orientation=vertical]:flex-col",
         className,
       )}
-      disabled={disabled}
+      {...props}
     >
       <SliderPrimitive.Track
         data-slot="slider-track"
@@ -160,13 +194,13 @@ function ColorSlider({
         <SliderPrimitive.Range
           data-slot="slider-range"
           className={cn(
-            "bg-transparent absolute data-[orientation=horizontal]:h-full data-[orientation=vertical]:w-full",
+            "absolute data-[orientation=horizontal]:h-full data-[orientation=vertical]:w-full",
           )}
         />
       </SliderPrimitive.Track>
       <SliderPrimitive.Thumb
         data-slot="slider-thumb"
-        className="block border size-4 shrink-0 rounded-full bg-white border-white shadow-sm transition-[color,box-shadow] focus-visible:outline-hidden disabled:pointer-events-none disabled:opacity-50"
+        className="bg-white border border-gray-300 block size-4 shrink-0 rounded-full transition-[color,box-shadow] focus-visible:outline-hidden disabled:pointer-events-none disabled:opacity-50"
       />
     </SliderPrimitive.Root>
   );
@@ -174,34 +208,27 @@ function ColorSlider({
 
 function AlphaSlider({
   className,
-  color = "#000",
-  defaultAlpha = 1,
-  disabled = false,
-  onChange = () => {},
+  defaultValue,
+  value,
+  hsla,
+  min = 0,
+  max = 1,
+  ...props
 }: {
-  color?: HexColor;
-  alpha?: number;
-  defaultAlpha?: number;
-  disabled?: boolean;
-  className?: string;
-  onChange?: (color: HexColor) => void;
-}) {
-  const rgba = hexToRGBA(color!);
+  hsla: HSLA;
+} & React.ComponentProps<typeof SliderPrimitive.Root>) {
   return (
     <SliderPrimitive.Root
       data-slot="slider"
-      defaultValue={[defaultAlpha]}
-      value={typeof rgba.a === "number" ? [rgba.a] : undefined}
-      min={0}
-      max={1}
-      step={0.01}
-      onValueChange={(values) =>
-        onChange?.(rgbaToHex({ ...rgba, a: values[0] }))}
+      defaultValue={defaultValue}
+      value={value}
+      min={min}
+      max={max}
       className={cn(
-        "relative flex w-full touch-none items-center select-none data-[disabled]:opacity-50",
+        "relative flex w-full touch-none items-center select-none data-[disabled]:opacity-50 data-[orientation=vertical]:h-full data-[orientation=vertical]:min-h-44 data-[orientation=vertical]:w-auto data-[orientation=vertical]:flex-col",
         className,
       )}
-      disabled={disabled}
+      {...props}
     >
       <div className="absolute inset-0 rounded-full overflow-hidden">
         <TransparentPattern />
@@ -209,25 +236,26 @@ function AlphaSlider({
       <SliderPrimitive.Track
         data-slot="slider-track"
         className={cn(
-          "relative grow overflow-hidden rounded-full data-[orientation=horizontal]:h-4 data-[orientation=horizontal]:w-full",
+          "bg-muted relative grow overflow-hidden rounded-full data-[orientation=horizontal]:h-4 data-[orientation=horizontal]:w-full",
         )}
         style={{
-          backgroundColor: "transparent",
-          backgroundImage: `linear-gradient(to right, transparent 0%, ${
-            rgbaToHex({ ...rgba, a: 1 })
-          } 100%)`,
+          background: `linear-gradient(to right, 
+            hsla(${hsla.h}, ${hsla.s}%, ${hsla.l}%, 0),
+            hsla(${hsla.h}, ${hsla.s}%, ${hsla.l}%, 1)
+          )`,
         }}
       >
         <SliderPrimitive.Range
           data-slot="slider-range"
           className={cn(
-            "bg-transparent absolute z-10 data-[orientation=horizontal]:h-full data-[orientation=vertical]:w-full",
+            "absolute data-[orientation=horizontal]:h-full data-[orientation=vertical]:w-full",
           )}
         />
       </SliderPrimitive.Track>
+
       <SliderPrimitive.Thumb
         data-slot="slider-thumb"
-        className="block border size-4 shrink-0 rounded-full bg-white border-white shadow-sm transition-[color,box-shadow] focus-visible:outline-hidden disabled:pointer-events-none disabled:opacity-50"
+        className="bg-white border border-gray-300 block size-4 shrink-0 rounded-full transition-[color,box-shadow] focus-visible:outline-hidden disabled:pointer-events-none disabled:opacity-50"
       />
     </SliderPrimitive.Root>
   );
@@ -267,67 +295,44 @@ function TransparentPattern() {
   );
 }
 
-function hueToRGBA(hue: number, alpha = 1): RGBA {
-  const s = 1;
-  const l = 0.5;
-  const c = (1 - Math.abs(2 * l - 1)) * s;
-  const x = c * (1 - Math.abs((hue / 60) % 2 - 1));
-  const m = l - c / 2;
+export function hslaToRGBA({ h, s, l, a = 1 }: HSLA): RGBA {
+  // Convert HSLA percentages to decimals
+  const saturation = s / 100;
+  const lightness = l / 100;
 
-  const [r, g, b] = hue < 60
-    ? [c, x, 0]
-    : hue < 120
-    ? [x, c, 0]
-    : hue < 180
-    ? [0, c, x]
-    : hue < 240
-    ? [0, x, c]
-    : hue < 300
-    ? [x, 0, c]
-    : [c, 0, x];
+  // Calculate chroma
+  const c = (1 - Math.abs(2 * lightness - 1)) * saturation;
+  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+  const m = lightness - c / 2;
 
+  let r = 0;
+  let g = 0;
+  let b = 0;
+
+  if (h >= 0 && h < 60) {
+    [r, g, b] = [c, x, 0];
+  } else if (h >= 60 && h < 120) {
+    [r, g, b] = [x, c, 0];
+  } else if (h >= 120 && h < 180) {
+    [r, g, b] = [0, c, x];
+  } else if (h >= 180 && h < 240) {
+    [r, g, b] = [0, x, c];
+  } else if (h >= 240 && h < 300) {
+    [r, g, b] = [x, 0, c];
+  } else {
+    [r, g, b] = [c, 0, x];
+  }
+
+  // Convert to RGB values between 0-255
   return {
     r: Math.round((r + m) * 255),
     g: Math.round((g + m) * 255),
     b: Math.round((b + m) * 255),
-    a: alpha,
+    a,
   };
 }
 
-function hslaToRGBA(h: number, s: number, l: number, a = 1): RGBA {
-  const k = (n: number) => (n + h / 30) % 12;
-  const f = (n: number) =>
-    l - s * Math.max(-1, Math.min(k(n) - 3, 9 - k(n), 1)) * Math.min(l, 1 - l);
-
-  const r = Math.round(f(0) * 255);
-  const g = Math.round(f(8) * 255);
-  const b = Math.round(f(4) * 255);
-
-  return { r, g, b, a };
-}
-
-function hexToRGBA(hex: HexColor): RGBA {
-  let color = hex.replace(/^#/, "");
-
-  if (color.length === 3) {
-    color = color
-      .split("")
-      .map((c) => c + c)
-      .join("");
-  }
-
-  const hasAlpha = color.length === 8; // Check if hex contains alpha channel
-  const bigint = Number.parseInt(color, 16);
-
-  const r = (bigint >> (hasAlpha ? 24 : 16)) & 255;
-  const g = (bigint >> (hasAlpha ? 16 : 8)) & 255;
-  const b = (bigint >> (hasAlpha ? 8 : 0)) & 255;
-  const a = hasAlpha ? Math.round(((bigint & 255) / 255) * 100) / 100 : 1; // Convert alpha to 0-1 range
-
-  return { r, g, b, a };
-}
-
-function rgbaToHex(
+export function rgbaToHex(
   { r, g, b, a = 1 }: RGBA,
   { alpha = true }: { alpha?: boolean } = {},
 ): HexColor {
@@ -338,25 +343,90 @@ function rgbaToHex(
   return `#${toHex(r)}${toHex(g)}${toHex(b)}${alphaHex}`;
 }
 
-function rgbaToHue({ r, g, b }: RGBA): number {
-  const max = Math.max(r, g, b);
-  const min = Math.min(r, g, b);
-  if (max === min) return 0;
-  const d = max - min;
-  let hue = 0;
-  switch (max) {
-    case r:
-      hue = (g - b) / d + (g < b ? 6 : 0);
-      break;
-    case g:
-      hue = (b - r) / d + 2;
-      break;
-    case b:
-      hue = (r - g) / d + 4;
-      break;
-  }
-
-  return Math.round(hue * 60);
+export function hslaToHex({ h, s, l, a = 1 }: HSLA): HexColor {
+  return rgbaToHex(hslaToRGBA({ h, s, l, a }));
 }
 
-export { AlphaSlider, ColorPicker, ColorSlider, SaturationLightness };
+export function hexToHSLA(hex: HexColor): HSLA {
+  // First convert hex to RGBA
+  const rgba = hexToRGBA(hex);
+
+  // Get RGB values in 0-1 range
+  const r = rgba.r / 255;
+  const g = rgba.g / 255;
+  const b = rgba.b / 255;
+
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const delta = max - min;
+
+  // Calculate HSL values
+  let h = 0;
+  let s = 0;
+  let l = (max + min) / 2;
+
+  if (delta !== 0) {
+    // Calculate hue
+    if (max === r) {
+      h = 60 * (((g - b) / delta) % 6);
+    } else if (max === g) {
+      h = 60 * ((b - r) / delta + 2);
+    } else {
+      h = 60 * ((r - g) / delta + 4);
+    }
+
+    // Make sure hue is positive
+    if (h < 0) {
+      h += 360;
+    }
+
+    // Calculate saturation
+    s = delta / (1 - Math.abs(2 * l - 1));
+  }
+
+  return {
+    h: Math.round(h),
+    s: Math.round(s * 100),
+    l: Math.round(l * 100),
+    a: rgba.a,
+  };
+}
+
+export function hexToRGBA(hex: HexColor): RGBA {
+  // Remove the # if present
+  const hexValue = hex.replace(/^#/, "");
+
+  // Parse based on length
+  let r: number;
+  let g: number;
+  let b: number;
+  let a = 1;
+
+  if (hexValue.length === 3) {
+    // #RGB format
+    r = Number.parseInt(hexValue[0] + hexValue[0], 16);
+    g = Number.parseInt(hexValue[1] + hexValue[1], 16);
+    b = Number.parseInt(hexValue[2] + hexValue[2], 16);
+  } else if (hexValue.length === 6) {
+    // #RRGGBB format
+    r = Number.parseInt(hexValue.slice(0, 2), 16);
+    g = Number.parseInt(hexValue.slice(2, 4), 16);
+    b = Number.parseInt(hexValue.slice(4, 6), 16);
+  } else if (hexValue.length === 8) {
+    // #RRGGBBAA format
+    r = Number.parseInt(hexValue.slice(0, 2), 16);
+    g = Number.parseInt(hexValue.slice(2, 4), 16);
+    b = Number.parseInt(hexValue.slice(4, 6), 16);
+    a = Number.parseInt(hexValue.slice(6, 8), 16) / 255;
+  } else if (hexValue.length === 4) {
+    // #RGBA format
+    r = Number.parseInt(hexValue[0] + hexValue[0], 16);
+    g = Number.parseInt(hexValue[1] + hexValue[1], 16);
+    b = Number.parseInt(hexValue[2] + hexValue[2], 16);
+    a = Number.parseInt(hexValue[3] + hexValue[3], 16) / 255;
+  } else {
+    throw new Error("Invalid hex color format");
+  }
+
+  return { r, g, b, a };
+}

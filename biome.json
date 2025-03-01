@@ -28,6 +28,7 @@
         "useMediaCaption": "off"
       },
       "style": {
+        "useConst": "off",
         "noNonNullAssertion": "off"
       }
     }
