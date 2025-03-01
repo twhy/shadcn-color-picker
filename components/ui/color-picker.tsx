@@ -33,7 +33,12 @@ function ColorPicker({
 }) {
   const rgba = useMemo(() => hexToRGBA(color!), [color]);
   return (
-    <div className={cn("rounded-lg size-64 relative shadow-sm space-y-4", className)}>
+    <div
+      className={cn(
+        "rounded-lg size-64 relative shadow-sm space-y-4",
+        className,
+      )}
+    >
       <SaturationLightness color={color} onChange={onChange} />
       <ColorSlider color={color} onChange={onChange} />
       <AlphaSlider color={color} onChange={onChange} />
@@ -46,7 +51,7 @@ function ColorPicker({
 
 function SaturationLightness({
   className,
-  color,
+  color = "#ff0000",
   onChange = () => {},
 }: {
   color?: HexColor;
@@ -55,11 +60,9 @@ function SaturationLightness({
 }) {
   const circle = useRef<HTMLDivElement>(null);
   const square = useRef<HTMLDivElement>(null);
-  const rgba = color ? hexToRGBA(color) : { r: 0, g: 0, b: 0, a: 1 };
-  const bgc = useMemo(() => {
-    return rgbaToHex(hueToRGBA(rgbaToHue(rgba)));
-  }, [rgba]);
-  
+  const rgba = hexToRGBA(color);
+  const bgc = useMemo(() => rgbaToHex(hueToRGBA(rgbaToHue(rgba))), [rgba]);
+
   const onMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
@@ -82,9 +85,9 @@ function SaturationLightness({
     circle.current.style.left = `${saturation * 100}%`;
     circle.current.style.top = `${lightness * 100}%`;
 
-    const hue = rgbaToHue(hexToRGBA(color!));
-    const rgba = hslToRGBA(hue, saturation, lightness);
-    onChange?.(rgbaToHex(rgba));
+    onChange?.(
+      rgbaToHex(hslaToRGBA(rgbaToHue(rgba), saturation, lightness, rgba.a)),
+    );
   };
 
   const onMouseUp = () => {
@@ -124,8 +127,11 @@ function ColorSlider({
   className?: string;
   onChange?: (color: HexColor) => void;
 }) {
-  const hue = useMemo(() => rgbaToHue(hexToRGBA(color!)), [color]);
-  const def = useMemo(() => rgbaToHue(hexToRGBA(defaultColor!)), [defaultColor]);
+  const rgba = hexToRGBA(color!);
+  const hue = useMemo(() => rgbaToHue(rgba), [rgba]);
+  const def = useMemo(() => rgbaToHue(hexToRGBA(defaultColor!)), [
+    defaultColor,
+  ]);
   return (
     <SliderPrimitive.Root
       data-slot="slider"
@@ -134,7 +140,8 @@ function ColorSlider({
       min={0}
       max={359}
       step={1}
-      onValueChange={(values) => onChange?.(rgbaToHex(hueToRGBA(values[0])))}
+      onValueChange={(values) =>
+        onChange?.(rgbaToHex(hueToRGBA(values[0], rgba.a)))}
       className={cn(
         "relative flex w-full touch-none items-center select-none data-[disabled]:opacity-50",
         className,
@@ -189,7 +196,8 @@ function AlphaSlider({
       min={0}
       max={1}
       step={0.01}
-      onValueChange={(values) => onChange?.(rgbaToHex({ ...rgba, a: values[0] }))}
+      onValueChange={(values) =>
+        onChange?.(rgbaToHex({ ...rgba, a: values[0] }))}
       className={cn(
         "relative flex w-full touch-none items-center select-none data-[disabled]:opacity-50",
         className,
@@ -206,8 +214,9 @@ function AlphaSlider({
         )}
         style={{
           backgroundColor: "transparent",
-          backgroundImage:
-            `linear-gradient(to right, transparent 0%, ${rgbaToHex({ ...rgba, a: 1 })} 100%)`,
+          backgroundImage: `linear-gradient(to right, transparent 0%, ${
+            rgbaToHex({ ...rgba, a: 1 })
+          } 100%)`,
         }}
       >
         <SliderPrimitive.Range
@@ -258,7 +267,7 @@ function TransparentPattern() {
   );
 }
 
-function hueToRGBA(hue: number): RGBA {
+function hueToRGBA(hue: number, alpha: number = 1): RGBA {
   const s = 1, l = 0.5;
   const c = (1 - Math.abs(2 * l - 1)) * s;
   const x = c * (1 - Math.abs((hue / 60) % 2 - 1));
@@ -280,11 +289,11 @@ function hueToRGBA(hue: number): RGBA {
     r: Math.round((r + m) * 255),
     g: Math.round((g + m) * 255),
     b: Math.round((b + m) * 255),
-    a: 1,
+    a: alpha,
   };
 }
 
-function hslToRGBA(h: number, s: number, l: number): RGBA {
+function hslaToRGBA(h: number, s: number, l: number, a: number = 1): RGBA {
   const k = (n: number) => (n + h / 30) % 12;
   const f = (n: number) =>
     l - s * Math.max(-1, Math.min(k(n) - 3, 9 - k(n), 1)) * Math.min(l, 1 - l);
@@ -293,7 +302,7 @@ function hslToRGBA(h: number, s: number, l: number): RGBA {
   const g = Math.round(f(8) * 255);
   const b = Math.round(f(4) * 255);
 
-  return { r, g, b, a: 1 };
+  return { r, g, b, a };
 }
 
 function hexToRGBA(hex: HexColor): RGBA {
@@ -317,7 +326,10 @@ function hexToRGBA(hex: HexColor): RGBA {
   return { r, g, b, a };
 }
 
-function rgbaToHex({ r, g, b, a = 1 }: RGBA, { alpha = true }: { alpha?: boolean } = {}): HexColor {
+function rgbaToHex(
+  { r, g, b, a = 1 }: RGBA,
+  { alpha = true }: { alpha?: boolean } = {},
+): HexColor {
   const toHex = (c: number) => Math.round(c).toString(16).padStart(2, "0");
 
   const alphaHex = alpha ? a <= 1 ? toHex(Math.round(a * 255)) : "" : "";
