@@ -1,6 +1,5 @@
 "use client";
 
-import * as React from "react";
 import * as SliderPrimitive from "@radix-ui/react-slider";
 
 import { cn } from "@/lib/utils";
@@ -237,6 +236,7 @@ function AlphaSlider({
 function TransparentPattern() {
   return (
     <svg width="100%" height="100%">
+      <title>Transparent Pattern</title>
       <defs>
         <pattern
           id="color-picker-transparent-pattern"
@@ -244,7 +244,7 @@ function TransparentPattern() {
           height="0.666rem"
           patternUnits="userSpaceOnUse"
         >
-          <rect width="0.666rem" height="0.666rem" fill="#fff"></rect>
+          <rect width="0.666rem" height="0.666rem" fill="#fff" />
           <rect x="0" width="0.333rem" height="0.333rem" y="0" fill="#ddd">
           </rect>
           <rect
@@ -267,8 +267,9 @@ function TransparentPattern() {
   );
 }
 
-function hueToRGBA(hue: number, alpha: number = 1): RGBA {
-  const s = 1, l = 0.5;
+function hueToRGBA(hue: number, alpha = 1): RGBA {
+  const s = 1;
+  const l = 0.5;
   const c = (1 - Math.abs(2 * l - 1)) * s;
   const x = c * (1 - Math.abs((hue / 60) % 2 - 1));
   const m = l - c / 2;
@@ -293,7 +294,7 @@ function hueToRGBA(hue: number, alpha: number = 1): RGBA {
   };
 }
 
-function hslaToRGBA(h: number, s: number, l: number, a: number = 1): RGBA {
+function hslaToRGBA(h: number, s: number, l: number, a = 1): RGBA {
   const k = (n: number) => (n + h / 30) % 12;
   const f = (n: number) =>
     l - s * Math.max(-1, Math.min(k(n) - 3, 9 - k(n), 1)) * Math.min(l, 1 - l);
@@ -316,7 +317,7 @@ function hexToRGBA(hex: HexColor): RGBA {
   }
 
   const hasAlpha = color.length === 8; // Check if hex contains alpha channel
-  const bigint = parseInt(color, 16);
+  const bigint = Number.parseInt(color, 16);
 
   const r = (bigint >> (hasAlpha ? 24 : 16)) & 255;
   const g = (bigint >> (hasAlpha ? 16 : 8)) & 255;

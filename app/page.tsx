@@ -1,6 +1,6 @@
 "use client";
 
-import { ColorPicker, HexColor } from "@/components/ui/color-picker";
+import { ColorPicker, type HexColor } from "@/components/ui/color-picker";
 import { useState } from "react";
 
 export default function Home() {
