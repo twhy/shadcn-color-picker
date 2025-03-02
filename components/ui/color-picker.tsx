@@ -42,7 +42,7 @@ export function ColorPicker({ color, onChange }: ColorPickerProps) {
       const y = Math.max(0, Math.min(1, (clientY - rect.top) / rect.height));
 
       setSaturation(x * 100);
-      setLightness(100 - y * 100);
+      setLightness(50 - y * 50);
     },
     [],
   );
@@ -132,7 +132,7 @@ export function ColorPicker({ color, onChange }: ColorPickerProps) {
           className="absolute w-4 h-4 border border-gray-200 bg-white rounded-full shadow-sm transform -translate-x-1/2 -translate-y-1/2"
           style={{
             left: `${saturation}%`,
-            top: `${100 - lightness}%`,
+            top: `${100 - lightness * 2}%`,
           }}
         />
       </div>
