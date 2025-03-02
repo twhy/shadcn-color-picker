@@ -52,7 +52,7 @@ export default function Home() {
 Just copy the code from `components/ui/color-picker.tsx` and change the styles to your liking.
 
 ## Screenshot
-![color-picker](https://github.com/user-attachments/assets/25cf79ae-94e1-4fe3-ad67-4750fdc5a039)
+![WX20250303-012107@2x](https://github.com/user-attachments/assets/9d3de286-fddf-4005-915c-f86081e1d99b)
 
 ## License
 
