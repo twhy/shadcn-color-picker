@@ -28,12 +28,16 @@ interface ColorPickerProps {
 }
 
 export function ColorPicker({ color, onChange }: ColorPickerProps) {
+  const squareRef = useRef<HTMLDivElement>(null);
   const hsla = useMemo(() => hexToHSLA(color), [color]);
   const [hue, setHue] = useState(hsla.h);
   const [saturation, setSaturation] = useState(hsla.s);
   const [lightness, setLightness] = useState(hsla.l);
   const [alpha, setAlpha] = useState(hsla.a);
-  const squareRef = useRef<HTMLDivElement>(null);
+  const [position, setPosition] = useState({
+    x: hsla.s,
+    y: Math.min(100, Math.max(0, 100 - hsla.l * 2)),
+  });
 
   const handleMove = useCallback(
     (clientX: number, clientY: number, element: HTMLElement) => {
@@ -41,8 +45,9 @@ export function ColorPicker({ color, onChange }: ColorPickerProps) {
       const x = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
       const y = Math.max(0, Math.min(1, (clientY - rect.top) / rect.height));
 
-      setSaturation(x * 100);
-      setLightness(50 - y * 50);
+      setPosition({ x: x * 100, y: y * 100 });
+      setSaturation(y === 0 ? 100 : x * 100);
+      setLightness((100 - (x * 50)) * (1 - y));
     },
     [],
   );
@@ -113,27 +118,21 @@ export function ColorPicker({ color, onChange }: ColorPickerProps) {
     <div className="flex flex-col gap-4 w-64">
       <div
         ref={squareRef}
-        className="relative w-full h-64 rounded-lg cursor-crosshair touch-none"
+        className="relative w-full h-64 rounded-lg cursor-crosshair touch-none border border-gray-200"
         style={{
           backgroundColor: `hsl(${hue}, 100%, 50%)`,
+          backgroundImage:
+            "linear-gradient(to top, rgb(0, 0, 0), transparent), linear-gradient(to right, rgb(255, 255, 255), transparent)",
         }}
         onMouseDown={handleSquareMouseDown}
         onMouseMove={(e) => e.buttons === 1 && handleSquareMouseMove(e)}
         onTouchStart={handleSquareTouchStart}
         onTouchMove={handleSquareTouchMove}
       >
-        {/* White gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-r from-white to-transparent rounded-lg" />
-        {/* Black gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black rounded-lg" />
-
         {/* Selection circle */}
         <div
           className="absolute w-4 h-4 border border-gray-200 bg-white rounded-full shadow-sm transform -translate-x-1/2 -translate-y-1/2"
-          style={{
-            left: `${saturation}%`,
-            top: `${100 - lightness * 2}%`,
-          }}
+          style={{ left: `${position.x}%`, top: `${position.y}%` }}
         />
       </div>
 

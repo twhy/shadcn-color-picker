@@ -18,9 +18,9 @@ export default function Home() {
       className="flex min-h-screen flex-col items-center justify-center p-24"
       style={{ backgroundColor: color }}
     >
-      <div className="flex flex-col items-center justify-center gap-3 bg-gray-50 p-4 rounded-lg">
+      <div className="flex flex-col items-center justify-center gap-3 bg-gray-50 p-4 rounded-lg shadow-md">
         <ColorPicker color={color} onChange={setColor} />
-        <div className="mt-4 flex items-center justify-center gap-3">
+        <div className="mt-2 flex items-center justify-center gap-3">
           <span
             className="size-4 rounded-full"
             style={{ backgroundColor: color }}
