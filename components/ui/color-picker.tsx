@@ -39,7 +39,7 @@ export function ColorPicker({ color, onChange }: ColorPickerProps) {
     y: Math.min(100, Math.max(0, 100 - hsla.l * 2)),
   });
 
-  const handleMove = useCallback(
+  const onMove = useCallback(
     (clientX: number, clientY: number, element: HTMLElement) => {
       const rect = element.getBoundingClientRect();
       const x = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
@@ -52,28 +52,28 @@ export function ColorPicker({ color, onChange }: ColorPickerProps) {
     [],
   );
 
-  const handleSquareMouseMove = useCallback(
+  const onMouseMove = useCallback(
     (event: React.MouseEvent<HTMLDivElement>) => {
-      handleMove(event.clientX, event.clientY, event.currentTarget);
+      onMove(event.clientX, event.clientY, event.currentTarget);
     },
-    [handleMove],
+    [onMove],
   );
 
-  const handleSquareTouchMove = useCallback(
+  const onTouchMove = useCallback(
     (event: React.TouchEvent<HTMLDivElement>) => {
       event.preventDefault();
       const touch = event.touches[0];
-      handleMove(touch.clientX, touch.clientY, event.currentTarget);
+      onMove(touch.clientX, touch.clientY, event.currentTarget);
     },
-    [handleMove],
+    [onMove],
   );
 
-  const handleSquareMouseDown = useCallback(
+  const onMouseDown = useCallback(
     (event: React.MouseEvent<HTMLDivElement>) => {
       const square = event.currentTarget;
 
       const handleMouseMove = (e: MouseEvent) => {
-        handleMove(e.clientX, e.clientY, square);
+        onMove(e.clientX, e.clientY, square);
       };
 
       const handleMouseUp = () => {
@@ -84,17 +84,17 @@ export function ColorPicker({ color, onChange }: ColorPickerProps) {
       document.addEventListener("mousemove", handleMouseMove);
       document.addEventListener("mouseup", handleMouseUp);
     },
-    [handleMove],
+    [onMove],
   );
 
-  const handleSquareTouchStart = useCallback(
+  const onTouchStart = useCallback(
     (event: React.TouchEvent<HTMLDivElement>) => {
       const square = event.currentTarget;
 
       const handleTouchMove = (e: TouchEvent) => {
         e.preventDefault();
         const touch = e.touches[0];
-        handleMove(touch.clientX, touch.clientY, square);
+        onMove(touch.clientX, touch.clientY, square);
       };
 
       const handleTouchEnd = () => {
@@ -107,7 +107,7 @@ export function ColorPicker({ color, onChange }: ColorPickerProps) {
       });
       document.addEventListener("touchend", handleTouchEnd);
     },
-    [handleMove],
+    [onMove],
   );
 
   useEffect(() => {
@@ -124,10 +124,10 @@ export function ColorPicker({ color, onChange }: ColorPickerProps) {
           backgroundImage:
             "linear-gradient(to top, rgb(0, 0, 0), transparent), linear-gradient(to right, rgb(255, 255, 255), transparent)",
         }}
-        onMouseDown={handleSquareMouseDown}
-        onMouseMove={(e) => e.buttons === 1 && handleSquareMouseMove(e)}
-        onTouchStart={handleSquareTouchStart}
-        onTouchMove={handleSquareTouchMove}
+        onMouseDown={onMouseDown}
+        onMouseMove={(e) => e.buttons === 1 && onMouseMove(e)}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
       >
         {/* Selection circle */}
         <div
