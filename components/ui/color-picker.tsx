@@ -70,6 +70,7 @@ export function ColorPicker({ color, onChange }: ColorPickerProps) {
 
   const onMouseDown = useCallback(
     (event: React.MouseEvent<HTMLDivElement>) => {
+      event.preventDefault();
       const square = event.currentTarget;
 
       const handleMouseMove = (e: MouseEvent) => {
