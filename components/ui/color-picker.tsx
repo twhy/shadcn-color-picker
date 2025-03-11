@@ -52,6 +52,16 @@ export function ColorPicker({ color, onChange }: ColorPickerProps) {
     [],
   );
 
+  const onClick = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const x = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+    const y = Math.max(0, Math.min(1, (event.clientY - rect.top) / rect.height));
+
+    setPosition({ x: x * 100, y: y * 100 });
+    setSaturation(x * 100);
+    setLightness((100 - (x * 50)) * (1 - y));
+  }, []);
+
   const onMouseMove = useCallback(
     (event: React.MouseEvent<HTMLDivElement>) => {
       onMove(event.clientX, event.clientY, event.currentTarget);
@@ -125,6 +135,7 @@ export function ColorPicker({ color, onChange }: ColorPickerProps) {
           backgroundImage:
             "linear-gradient(to top, rgb(0, 0, 0), transparent), linear-gradient(to right, rgb(255, 255, 255), transparent)",
         }}
+        onClick={onClick}
         onMouseDown={onMouseDown}
         onMouseMove={(e) => e.buttons === 1 && onMouseMove(e)}
         onTouchStart={onTouchStart}
